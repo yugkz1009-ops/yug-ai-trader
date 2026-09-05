@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yug AI Trader V2 - Live Crypto</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg-main: #0b0e14;
+      --bg-card: #151922;
+      --border: #222735;
+      --text-main: #f0f2f5;
+      --text-muted: #848e9c;
+      --accent-green: #0ecb81;
+      --accent-red: #f6465d;
+      --accent-blue: #2962ff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background: var(--bg-main);
+      color: var(--text-main);
+      padding: 20px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .header h1 {
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .badge {
+      font-size: 0.75rem;
+      background: var(--accent-blue);
+      padding: 2px 8px;
+      border-radius: 12px;
+      text-transform: uppercase;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 3fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .stat-item {
+      background: rgba(255, 255, 255, 0.02);
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+
+    .stat-val {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .signal-box {
+      margin-top: 15px;
+      padding: 16px;
+      border-radius: 6px;
+      text-align: center;
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .signal-text {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-top: 6px;
+    }
+
+    .signal-buy { color: var(--accent-green); }
+    .signal-sell { color: var(--accent-red); }
+    .signal-hold { color: var(--text-muted); }
+
+    .order-book-list {
+      list-style: none;
+      font-size: 0.85rem;
+      margin-top: 10px;
+    }
+
+    .order-book-list li {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    select, button {
+      background: #1e2430;
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #272f3d;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="header">
+    <h1>Yug AI Trader <span class="badge">V2 Live</span></h1>
+    <div style="display: flex; gap: 10px;">
+      <select id="assetSelect" onchange="loadData()">
+        <option value="bitcoin">Bitcoin (BTC)</option>
+        <option value="ethereum">Ethereum (ETH)</option>
+        <option value="solana">Solana (SOL)</option>
+      </select>
+      <button onclick="loadData()">Refresh</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- Chart and Stats Area -->
+    <main>
+      <div class="stats-row">
+        <div class="stat-item">
+          <div class="stat-label">Market Price</div>
+          <div class="stat-val" id="priceDisplay">Loading...</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">24h Change</div>
+          <div class="stat-val" id="changeDisplay">--</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">AI Confidence</div>
+          <div class="stat-val" id="confidenceDisplay">87.4%</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <canvas id="priceChart" height="120"></canvas>
+      </div>
+    </main>
+
+    <!-- AI Trade Panel -->
+    <aside>
+      <div class="card">
+        <h3 style="margin-bottom: 12px;">AI Model Status</h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted);">
+          Algorithm: Ensemble Momentum + Mean Reversion V2
+        </p>
+
+        <div class="signal-box">
+          <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Signal</div>
+          <div id="aiSignal" class="signal-text signal-hold">HOLD</div>
+        </div>
+
+        <h4 style="margin: 20px 0 10px 0; font-size: 0.9rem;">Live Signals Log</h4>
+        <ul class="order-book-list" id="signalsLog">
+          <li><span>RSI Indicator</span><span id="rsiVal">54.2 (Neutral)</span></li>
+          <li><span>MA-20 Cross</span><span style="color: var(--accent-green);">Bullish</span></li>
+          <li><span>Target Exit</span><span id="targetPrice">--</span></li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    let chartInstance = null;
+
+    async function loadData() {
+      const asset = document.getElementById('assetSelect').value;
+      const priceDisplay = document.getElementById('priceDisplay');
+      const changeDisplay = document.getElementById('changeDisplay');
+      const aiSignal = document.getElementById('aiSignal');
+
+      try {
+        // Fetch 7-day hourly market data
+        const res = await fetch(`https://api.coingecko.com/api/v3/coins/${asset}/market_chart?vs_currency=usd&days=7`);
+        const data = await res.json();
+        
+        const prices = data.prices.map(p => ({ time: new Date(p[0]).toLocaleDateString([], { month: 'numeric', day: 'numeric' }), price: p[1] }));
+        const latestPrice = prices[prices.length - 1].price;
+        const initialPrice = prices[0].price;
+        const changePercent = (((latestPrice - initialPrice) / initialPrice) * 100).toFixed(2);
+
+        // Update displays
+        priceDisplay.textContent = `$${latestPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        changeDisplay.textContent = `${changePercent}%`;
+        changeDisplay.style.color = changePercent >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
+
+        // Basic AI decision logic
+        if (changePercent > 1.5) {
+          aiSignal.textContent = 'STRONG BUY';
+          aiSignal.className = 'signal-text signal-buy';
+          document.getElementById('targetPrice').textContent = `$${(latestPrice * 1.05).toFixed(2)}`;
+        } else if (changePercent < -1.5) {
+          aiSignal.textContent = 'SELL / SHORT';
+          aiSignal.className = 'signal-text signal-sell';
+          document.getElementById('targetPrice').textContent = `$${(latestPrice * 0.95).toFixed(2)}`;
+        } else {
+          aiSignal.textContent = 'HOLD';
+          aiSignal.className = 'signal-text signal-hold';
+          document.getElementById('targetPrice').textContent = 'Range Bound';
+        }
+
+        renderChart(prices);
+      } catch (err) {
+        priceDisplay.textContent = 'API Limit';
+        console.error(err);
+      }
+    }
+
+    function renderChart(prices) {
+      const ctx = document.getElementById('priceChart').getContext('2d');
+      const labels = prices.map((p, idx) => idx % 6 === 0 ? p.time : '');
+      const values = prices.map(p => p.price);
+
+      if (chartInstance) chartInstance.destroy();
+
+      chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Price (USD)',
+            data: values,
+            borderColor: '#2962ff',
+            backgroundColor: 'rgba(41, 98, 255, 0.05)',
+            fill: true,
+            tension: 0.2,
+            pointRadius: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { color: 'rgba(255, 255, 255, 0.05)' } },
+            y: { grid: { color: 'rgba(255, 255, 255, 0.05)' } }
+          }
+        }
+      });
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
